@@ -1,0 +1,1 @@
+/Users/ryanbahadori/Documents/GitHub/Spine/target/debug/spn: /Users/ryanbahadori/Documents/GitHub/Spine/src/config.rs /Users/ryanbahadori/Documents/GitHub/Spine/src/detect.rs /Users/ryanbahadori/Documents/GitHub/Spine/src/execute.rs /Users/ryanbahadori/Documents/GitHub/Spine/src/main.rs /Users/ryanbahadori/Documents/GitHub/Spine/src/tui.rs

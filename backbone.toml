@@ -1,0 +1,103 @@
+[managers.brew]
+name = "Homebrew"
+check_command = "brew --version"
+refresh = "brew update"
+upgrade_all = "brew upgrade"
+cleanup = "brew cleanup"
+requires_sudo = false
+
+[managers.apt]
+name = "APT"
+check_command = "apt --version"
+refresh = "sudo apt update"
+upgrade_all = "sudo apt upgrade -y"
+cleanup = "sudo apt autoremove -y"
+requires_sudo = true
+
+[managers.dnf]
+name = "DNF"
+check_command = "dnf --version"
+refresh = "sudo dnf makecache"
+upgrade_all = "sudo dnf upgrade -y"
+cleanup = "sudo dnf autoremove -y"
+requires_sudo = true
+
+[managers.pacman]
+name = "Pacman"
+check_command = "pacman --version"
+refresh = "sudo pacman -Sy"
+upgrade_all = "sudo pacman -Syu --noconfirm"
+cleanup = "sudo pacman -Rns $(pacman -Qdtq)"
+requires_sudo = true
+
+[managers.nix]
+name = "Nix"
+check_command = "nix --version"
+refresh = "nix flake update"
+upgrade_all = "nix profile upgrade --all"
+cleanup = "nix store gc"
+requires_sudo = false
+
+[managers.snap]
+name = "Snap"
+check_command = "snap --version"
+refresh = "sudo snap refresh"
+upgrade_all = "sudo snap refresh"
+cleanup = "sudo snap remove --purge $(snap list | awk 'NR>1 {print $1}')"
+requires_sudo = true
+
+[managers.flatpak]
+name = "Flatpak"
+check_command = "flatpak --version"
+refresh = "flatpak update -y"
+upgrade_all = "flatpak update -y"
+cleanup = "flatpak uninstall --unused -y"
+requires_sudo = false
+
+[managers.zypper]
+name = "Zypper"
+check_command = "zypper --version"
+refresh = "sudo zypper refresh"
+upgrade_all = "sudo zypper update -y"
+cleanup = "sudo zypper clean -a"
+requires_sudo = true
+
+[managers.apk]
+name = "APK"
+check_command = "apk --version"
+refresh = "sudo apk update"
+upgrade_all = "sudo apk upgrade"
+cleanup = "sudo apk cache clean"
+requires_sudo = true
+
+[managers.pkg]
+name = "pkg"
+check_command = "pkg --version"
+refresh = "sudo pkg update"
+upgrade_all = "sudo pkg upgrade -y"
+cleanup = "sudo pkg autoremove -y"
+requires_sudo = true
+
+[managers.emerge]
+name = "Portage"
+check_command = "emerge --version"
+refresh = "sudo emerge --sync"
+upgrade_all = "sudo emerge -avuDN @world"
+cleanup = "sudo emerge --depclean"
+requires_sudo = true
+
+[managers.yarn]
+name = "Yarn"
+check_command = "yarn --version"
+refresh = "yarn cache clean"
+upgrade_all = "yarn global upgrade"
+cleanup = "yarn cache clean"
+requires_sudo = false
+
+[managers.pnpm]
+name = "pnpm"
+check_command = "pnpm --version"
+refresh = "pnpm store prune"
+upgrade_all = "pnpm update -g"
+cleanup = "pnpm store prune"
+requires_sudo = false
