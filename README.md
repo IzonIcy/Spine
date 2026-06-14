@@ -22,7 +22,7 @@ sudo cp target/release/spn /usr/local/bin/
 ## Usage
 
 ```bash
-# Open the TUI and upgrade all detected managers
+# Open the TUI and upgrades all detected managers
 spn
 
 # Run without the TUI
