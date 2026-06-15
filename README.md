@@ -1,6 +1,6 @@
 # Spine
 
-Spine is a meta package manager for any *nix system. It discovers installed package managers and runs their update workflows in parallel with a lightweight TUI.
+Spine is a meta package manager for most *nix systems (I think?). It discovers installed package managers and runs their update workflows in parallel with a lightweight TUI.
 
 ## Features
 

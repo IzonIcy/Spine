@@ -8,7 +8,7 @@ use clap::{Parser, Subcommand};
 use config::Config;
 
 #[derive(Parser, Debug)]
-#[command(name = "spn", version, about = "Meta package manager for *nix systems")]
+#[command(name = "spn", version, about = "Meta package manager for most *nix systems")]
 struct Cli {
     #[command(subcommand)]
     command: Option<Commands>,
