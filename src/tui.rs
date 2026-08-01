@@ -79,7 +79,7 @@ async fn run_inner(
             let layout = Layout::default()
                 .direction(Direction::Vertical)
                 .constraints([Constraint::Percentage(65), Constraint::Percentage(35)])
-                .split(frame.size());
+                .split(frame.area());
 
             let items: Vec<ListItem> = status_map
                 .values()
