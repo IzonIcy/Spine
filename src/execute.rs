@@ -717,3 +717,77 @@ fn unix_timestamp_millis() -> u128 {
         .unwrap_or_default()
         .as_millis()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::ManagerConfig;
+
+    fn manager(requires_sudo: Option<bool>, has_upgrade: bool) -> Manager {
+        Manager {
+            key: "m".into(),
+            config: ManagerConfig {
+                name: "M".into(),
+                check_command: "m --version".into(),
+                enabled: true,
+                refresh: None,
+                check_updates: Some("m outdated".into()),
+                upgrade_all: has_upgrade.then(|| "m upgrade".into()),
+                cleanup: None,
+                requires_sudo,
+                timeout_seconds: None,
+                shell: None,
+            },
+            timeout_seconds: 3600,
+            shell: true,
+        }
+    }
+
+    #[test]
+    fn check_workflow_never_needs_sudo() {
+        let managers = vec![manager(Some(true), true)];
+        assert!(!needs_sudo(&managers, Workflow::Check, false));
+    }
+
+    #[test]
+    fn upgrade_needs_sudo_only_when_required_and_possible() {
+        assert!(needs_sudo(&[manager(Some(true), true)], Workflow::Upgrade, false));
+        assert!(!needs_sudo(&[manager(Some(false), true)], Workflow::Upgrade, false));
+        assert!(
+            !needs_sudo(&[manager(Some(true), false)], Workflow::Upgrade, false),
+            "no upgrade command means nothing privileged to run"
+        );
+    }
+
+    #[test]
+    fn cleanup_needs_sudo_for_privileged_managers() {
+        assert!(needs_sudo(&[manager(Some(true), false)], Workflow::Cleanup, false));
+        assert!(!needs_sudo(&[manager(Some(false), false)], Workflow::Cleanup, false));
+    }
+
+    #[test]
+    fn workflow_labels_are_stable() {
+        assert_eq!(Workflow::Check.label(), "check");
+        assert_eq!(Workflow::Upgrade.label(), "upgrade");
+        assert_eq!(Workflow::Cleanup.label(), "cleanup");
+    }
+
+    #[test]
+    fn stage_labels_are_stable() {
+        assert_eq!(stage_label(Stage::Pending), "pending");
+        assert_eq!(stage_label(Stage::Refreshing), "refresh");
+        assert_eq!(stage_label(Stage::Complete), "complete");
+        assert_eq!(stage_label(Stage::Failed), "failed");
+    }
+
+    #[tokio::test]
+    async fn check_command_detects_success_and_failure() {
+        assert!(check_command("true", true, 5).await.unwrap());
+        assert!(!check_command("false", true, 5).await.unwrap());
+    }
+
+    #[tokio::test]
+    async fn check_command_timeout_reports_not_installed() {
+        assert!(!check_command("sleep 3", true, 1).await.unwrap());
+    }
+}

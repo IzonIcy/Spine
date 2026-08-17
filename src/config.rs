@@ -417,3 +417,103 @@ check_updates = "mise outdated"
 upgrade_all = "mise upgrade"
 requires_sudo = false
 "#;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn parse(toml_str: &str) -> Config {
+        toml::from_str(toml_str).expect("config should parse")
+    }
+
+    #[test]
+    fn default_config_is_valid() {
+        let config = parse(DEFAULT_CONFIG);
+        assert!(config.validate().is_empty(), "defaults must be warning-free");
+        assert_eq!(config.settings.timeout_seconds, 3600);
+        assert!(config.settings.shell);
+        assert!(!config.managers.is_empty());
+    }
+
+    #[test]
+    fn validate_flags_missing_managers() {
+        let warnings = parse("[settings]\n[managers]").validate();
+        assert!(warnings.iter().any(|w| w.contains("no managers")));
+    }
+
+    #[test]
+    fn validate_flags_empty_check_command() {
+        let config = parse(
+            r#"
+[managers.bad]
+name = "Bad"
+check_command = ""
+"#,
+        );
+        let warnings = config.validate();
+        assert!(warnings.iter().any(|w| w.contains("empty check_command")));
+    }
+
+    #[test]
+    fn validate_flags_manager_without_commands() {
+        let config = parse(
+            r#"
+[managers.idle]
+name = "Idle"
+check_command = "idle --version"
+"#,
+        );
+        assert!(
+            config
+                .validate()
+                .iter()
+                .any(|w| w.contains("no check_updates, upgrade_all, or cleanup"))
+        );
+    }
+
+    #[test]
+    fn validate_flags_zero_timeout() {
+        let config = parse(
+            r#"
+[managers.zero]
+name = "Zero"
+check_command = "zero --version"
+check_updates = "zero outdated"
+timeout_seconds = 0
+"#,
+        );
+        assert!(config.validate().iter().any(|w| w.contains("timeout_seconds = 0")));
+    }
+
+    #[test]
+    fn validate_flags_unknown_manager_in_profile() {
+        let config = parse(
+            r#"
+[managers.brew]
+name = "Homebrew"
+check_command = "brew --version"
+check_updates = "brew outdated"
+
+[profiles.dev]
+only = ["brew", "ghost"]
+"#,
+        );
+        let warnings = config.validate();
+        assert!(warnings.iter().any(|w| w.contains("unknown manager `ghost`")));
+    }
+
+    #[test]
+    fn manager_defaults_apply() {
+        let config = parse(
+            r#"
+[managers.brew]
+name = "Homebrew"
+check_command = "brew --version"
+"#,
+        );
+        let manager = &config.managers["brew"];
+        assert!(manager.enabled, "enabled defaults to true");
+        assert!(manager.shell.is_none(), "shell default deferred to settings");
+        assert_eq!(manager.timeout_seconds, None);
+    }
+}

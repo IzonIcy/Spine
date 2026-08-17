@@ -1,12 +1,8 @@
-mod config;
-mod detect;
-mod execute;
-mod tui;
-
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use config::Config;
-use execute::{RunOptions, Workflow};
+use spine::config::Config;
+use spine::execute::{RunOptions, Workflow};
+use spine::{config, detect, execute, tui};
 
 #[derive(Parser, Debug)]
 #[command(

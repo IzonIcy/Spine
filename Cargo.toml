@@ -24,3 +24,7 @@ toml = "1.1"
 large_enum_variant = "allow"
 collapsible_match = "allow"
 
+
+[dev-dependencies]
+tempfile = "3"
+tokio = { version = "1.38", features = ["macros", "rt-multi-thread"] }

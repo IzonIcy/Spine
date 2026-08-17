@@ -47,3 +47,58 @@ pub fn filter_managers(
     }
     managers
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn manager(key: &str) -> Manager {
+        Manager {
+            key: key.to_string(),
+            config: ManagerConfig {
+                name: key.to_string(),
+                check_command: format!("{key} --version"),
+                enabled: true,
+                refresh: None,
+                check_updates: None,
+                upgrade_all: None,
+                cleanup: None,
+                requires_sudo: None,
+                timeout_seconds: None,
+                shell: None,
+            },
+            timeout_seconds: 3600,
+            shell: true,
+        }
+    }
+
+    #[test]
+    fn no_filters_keeps_everything() {
+        let managers = vec![manager("brew"), manager("cargo"), manager("npm")];
+        assert_eq!(filter_managers(managers, &[], &[]).len(), 3);
+    }
+
+    #[test]
+    fn only_keeps_listed_in_order() {
+        let managers = vec![manager("brew"), manager("cargo"), manager("npm")];
+        let filtered = filter_managers(managers, &["npm".into(), "brew".into()], &[]);
+        let keys: Vec<_> = filtered.iter().map(|m| m.key.as_str()).collect();
+        assert_eq!(keys, ["brew", "npm"], "original order preserved");
+    }
+
+    #[test]
+    fn skip_removes_listed() {
+        let managers = vec![manager("brew"), manager("cargo")];
+        let filtered = filter_managers(managers, &[], &["cargo".into()]);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].key, "brew");
+    }
+
+    #[test]
+    fn skip_wins_over_only() {
+        let managers = vec![manager("brew"), manager("cargo")];
+        let filtered = filter_managers(managers, &["brew".into(), "cargo".into()], &["brew".into()]);
+        assert_eq!(filtered.len(), 1);
+        assert_eq!(filtered[0].key, "cargo");
+    }
+}
