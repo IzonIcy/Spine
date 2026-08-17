@@ -1,5 +1,7 @@
 # Spine
 
+[![CI](https://github.com/IzonIcy/Spine/actions/workflows/ci.yml/badge.svg)](https://github.com/IzonIcy/Spine/actions/workflows/ci.yml)
+
 Spine is a meta package manager for most *nix systems. It discovers installed package managers and runs update-oriented workflows in parallel with either a lightweight TUI or script-friendly CLI output.
 
 ## Features
