@@ -751,8 +751,16 @@ mod tests {
 
     #[test]
     fn upgrade_needs_sudo_only_when_required_and_possible() {
-        assert!(needs_sudo(&[manager(Some(true), true)], Workflow::Upgrade, false));
-        assert!(!needs_sudo(&[manager(Some(false), true)], Workflow::Upgrade, false));
+        assert!(needs_sudo(
+            &[manager(Some(true), true)],
+            Workflow::Upgrade,
+            false
+        ));
+        assert!(!needs_sudo(
+            &[manager(Some(false), true)],
+            Workflow::Upgrade,
+            false
+        ));
         assert!(
             !needs_sudo(&[manager(Some(true), false)], Workflow::Upgrade, false),
             "no upgrade command means nothing privileged to run"
@@ -761,8 +769,16 @@ mod tests {
 
     #[test]
     fn cleanup_needs_sudo_for_privileged_managers() {
-        assert!(needs_sudo(&[manager(Some(true), false)], Workflow::Cleanup, false));
-        assert!(!needs_sudo(&[manager(Some(false), false)], Workflow::Cleanup, false));
+        assert!(needs_sudo(
+            &[manager(Some(true), false)],
+            Workflow::Cleanup,
+            false
+        ));
+        assert!(!needs_sudo(
+            &[manager(Some(false), false)],
+            Workflow::Cleanup,
+            false
+        ));
     }
 
     #[test]

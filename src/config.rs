@@ -429,7 +429,10 @@ mod tests {
     #[test]
     fn default_config_is_valid() {
         let config = parse(DEFAULT_CONFIG);
-        assert!(config.validate().is_empty(), "defaults must be warning-free");
+        assert!(
+            config.validate().is_empty(),
+            "defaults must be warning-free"
+        );
         assert_eq!(config.settings.timeout_seconds, 3600);
         assert!(config.settings.shell);
         assert!(!config.managers.is_empty());
@@ -463,12 +466,10 @@ name = "Idle"
 check_command = "idle --version"
 "#,
         );
-        assert!(
-            config
-                .validate()
-                .iter()
-                .any(|w| w.contains("no check_updates, upgrade_all, or cleanup"))
-        );
+        assert!(config
+            .validate()
+            .iter()
+            .any(|w| w.contains("no check_updates, upgrade_all, or cleanup")));
     }
 
     #[test]
@@ -482,7 +483,10 @@ check_updates = "zero outdated"
 timeout_seconds = 0
 "#,
         );
-        assert!(config.validate().iter().any(|w| w.contains("timeout_seconds = 0")));
+        assert!(config
+            .validate()
+            .iter()
+            .any(|w| w.contains("timeout_seconds = 0")));
     }
 
     #[test]
@@ -499,7 +503,9 @@ only = ["brew", "ghost"]
 "#,
         );
         let warnings = config.validate();
-        assert!(warnings.iter().any(|w| w.contains("unknown manager `ghost`")));
+        assert!(warnings
+            .iter()
+            .any(|w| w.contains("unknown manager `ghost`")));
     }
 
     #[test]
@@ -513,7 +519,10 @@ check_command = "brew --version"
         );
         let manager = &config.managers["brew"];
         assert!(manager.enabled, "enabled defaults to true");
-        assert!(manager.shell.is_none(), "shell default deferred to settings");
+        assert!(
+            manager.shell.is_none(),
+            "shell default deferred to settings"
+        );
         assert_eq!(manager.timeout_seconds, None);
     }
 }

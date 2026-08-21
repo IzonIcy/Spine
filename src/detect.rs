@@ -97,7 +97,8 @@ mod tests {
     #[test]
     fn skip_wins_over_only() {
         let managers = vec![manager("brew"), manager("cargo")];
-        let filtered = filter_managers(managers, &["brew".into(), "cargo".into()], &["brew".into()]);
+        let filtered =
+            filter_managers(managers, &["brew".into(), "cargo".into()], &["brew".into()]);
         assert_eq!(filtered.len(), 1);
         assert_eq!(filtered[0].key, "cargo");
     }
