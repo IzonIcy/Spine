@@ -35,14 +35,13 @@ fn isolate_in(tempdir: &Path) -> EnvGuard {
     let old_home = std::env::var("HOME").ok();
     std::env::set_current_dir(tempdir).expect("enter tempdir");
     std::env::set_var("HOME", tempdir.join("fake-home"));
-    EnvGuard {
-        old_dir,
-        old_home,
-    }
+    EnvGuard { old_dir, old_home }
 }
 
 fn env_guard_lock() -> std::sync::MutexGuard<'static, ()> {
-    ENV_LOCK.lock().unwrap_or_else(|poisoned| poisoned.into_inner())
+    ENV_LOCK
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner())
 }
 
 #[test]
