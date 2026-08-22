@@ -33,6 +33,7 @@ pub struct RunOptions {
     pub workflow: Workflow,
     pub cleanup: bool,
     pub continue_on_error: bool,
+    pub notify: bool,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -102,6 +103,41 @@ struct CommandRun {
     output: Vec<String>,
 }
 
+/// Best-effort desktop notification when a workflow completes.
+/// Never fails the run — notification problems are silently ignored.
+pub fn notify_completion(summary: &RunSummary) {
+    let ok = summary.managers.iter().filter(|m| m.success).count();
+    let failed = summary.managers.len() - ok;
+    let message = format!(
+        "{} complete: {} ok, {} failed",
+        summary.workflow.label(),
+        ok,
+        failed
+    );
+
+    #[cfg(target_os = "macos")]
+    {
+        let script = format!("display notification \"{message}\" with title \"spine\"");
+        let _ = std::process::Command::new("osascript")
+            .arg("-e")
+            .arg(&script)
+            .status();
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        let _ = std::process::Command::new("notify-send")
+            .arg("spine")
+            .arg(&message)
+            .status();
+    }
+
+    #[cfg(not(any(target_os = "macos", target_os = "linux")))]
+    {
+        let _ = message;
+    }
+}
+
 pub async fn check_command(cmd: &str, shell: bool, timeout_seconds: u64) -> Result<bool> {
     let result = run_command(cmd, shell, timeout_seconds, None, None, false, true).await;
 
@@ -114,6 +150,10 @@ pub async fn check_command(cmd: &str, shell: bool, timeout_seconds: u64) -> Resu
 pub async fn run_cli(managers: Vec<Manager>, options: RunOptions) -> Result<RunSummary> {
     let summary = run_many(managers, options, None, true).await;
     write_history(&summary)?;
+
+    if options.notify {
+        notify_completion(&summary);
+    }
 
     if !summary.success && !options.continue_on_error {
         return Err(anyhow::anyhow!("One or more managers failed"));
@@ -129,6 +169,10 @@ pub async fn run_with_updates(
 ) -> Result<RunSummary> {
     let summary = run_many(managers, options, Some(tx), false).await;
     write_history(&summary)?;
+
+    if options.notify {
+        notify_completion(&summary);
+    }
 
     if !summary.success && !options.continue_on_error {
         return Err(anyhow::anyhow!("One or more managers failed"));
@@ -570,6 +614,19 @@ pub async fn print_doctor(config: &Config, managers: &[Manager]) -> Result<()> {
         for warning in warnings {
             println!("  warning: {warning}");
         }
+    }
+
+    println!("\nPrivileges:");
+    let sudo_status = std::process::Command::new("sudo")
+        .arg("-n")
+        .arg("-v")
+        .status();
+    match sudo_status {
+        Ok(status) if status.success() => {
+            println!("  sudo: available (cached credentials or passwordless)");
+        }
+        Ok(_) => println!("  sudo: installed (password will be required for upgrades)"),
+        Err(_) => println!("  sudo: NOT FOUND — privileged workflows will fail"),
     }
 
     println!("\nManagers:");

@@ -2,7 +2,8 @@ use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use spine::config::Config;
 use spine::execute::{RunOptions, Workflow};
-use spine::{config, detect, execute, tui};
+use spine::{config, detect, execute, schedule, tui};
+use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -46,6 +47,13 @@ struct Cli {
         help = "Do not return an error if one manager fails"
     )]
     continue_on_error: bool,
+
+    #[arg(
+        long,
+        global = true,
+        help = "Send a desktop notification when the workflow completes"
+    )]
+    notify: bool,
 }
 
 #[derive(Subcommand, Debug)]
@@ -56,6 +64,16 @@ enum Commands {
     Cleanup,
     List,
     Doctor,
+    Schedule {
+        #[arg(long, help = "Run every day instead of every Monday")]
+        daily: bool,
+
+        #[arg(long, default_value = "09:00", help = "Time of day to run (HH:MM)")]
+        at: String,
+
+        #[arg(long, help = "Write the plist to this path instead of stdout")]
+        out: Option<PathBuf>,
+    },
     History {
         #[command(subcommand)]
         command: Option<HistoryCommands>,
@@ -84,6 +102,15 @@ async fn main() -> Result<()> {
 
     if let Some(Commands::History { command }) = &cli.command {
         execute::print_history(matches!(command, Some(HistoryCommands::Last)))?;
+        return Ok(());
+    }
+
+    if let Some(Commands::Schedule { daily, at, out }) = &cli.command {
+        let written = schedule::emit(*daily, at, out.as_deref())?;
+        if out.is_some() {
+            println!("Wrote launchd plist to {}", written.display());
+            println!("Load it with: launchctl bootstrap gui/$(id -u) {}", written.display());
+        }
         return Ok(());
     }
 
@@ -135,7 +162,9 @@ async fn main() -> Result<()> {
         Some(Commands::Doctor) => {
             execute::print_doctor(&config, &filtered).await?;
         }
-        Some(Commands::Config { .. }) | Some(Commands::History { .. }) => unreachable!(),
+        Some(Commands::Config { .. })
+        | Some(Commands::History { .. })
+        | Some(Commands::Schedule { .. }) => unreachable!(),
         Some(Commands::Cli)
         | Some(Commands::Upgrade)
         | Some(Commands::Check)
@@ -146,6 +175,7 @@ async fn main() -> Result<()> {
                 workflow,
                 cleanup: cleanup_enabled(&cli, &config, workflow),
                 continue_on_error: cli.continue_on_error || config.settings.continue_on_error,
+                notify: cli.notify || config.settings.notify,
             };
 
             if cli.dry_run {

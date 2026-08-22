@@ -33,6 +33,10 @@ pub struct Settings {
 
     #[serde(default = "default_shell")]
     pub shell: bool,
+
+    /// Send a desktop notification when a workflow completes.
+    #[serde(default)]
+    pub notify: bool,
 }
 
 impl Default for Settings {
@@ -42,6 +46,7 @@ impl Default for Settings {
             continue_on_error: false,
             cleanup_after_upgrade: false,
             shell: default_shell(),
+            notify: false,
         }
     }
 }
@@ -73,12 +78,27 @@ pub struct ManagerConfig {
 }
 
 impl Config {
+    /// Reject configs written for an incompatible future/old layout.
+    /// Absent `schema_version` is treated as version 1.
+    fn check_schema_version(content: &str) -> Result<()> {
+        let value: toml::Value =
+            toml::from_str(content).context("Invalid TOML while checking schema version")?;
+        match value.get("schema_version").map(|v| v.as_integer()) {
+            Some(Some(1)) | None => Ok(()),
+            Some(other) => anyhow::bail!(
+                "unsupported config schema_version {:?} (supported: 1)",
+                other
+            ),
+        }
+    }
+
     pub fn load() -> Result<Self> {
         let search_paths = config_search_paths();
         for path in search_paths {
             if path.exists() {
                 let content = fs::read_to_string(&path)
                     .with_context(|| format!("Failed to read config at {}", path.display()))?;
+                Self::check_schema_version(&content)?;
                 let mut parsed: Config = toml::from_str(&content)
                     .with_context(|| format!("Invalid TOML in {}", path.display()))?;
                 parsed.active_path = Some(path);
