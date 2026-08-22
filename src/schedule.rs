@@ -42,8 +42,7 @@ fn parse_at(at: &str) -> Result<(u32, u32)> {
 /// Emit the plist to stdout or to `out`.
 pub fn emit(daily: bool, at: &str, out: Option<&Path>) -> Result<PathBuf> {
     let (hour, minute) = parse_at(at)?;
-    let program =
-        std::env::current_exe().unwrap_or_else(|_| PathBuf::from("/usr/local/bin/spn"));
+    let program = std::env::current_exe().unwrap_or_else(|_| PathBuf::from("/usr/local/bin/spn"));
     let plist = launchd_plist(&program, daily, hour, minute);
 
     match out {

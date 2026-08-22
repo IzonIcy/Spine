@@ -109,7 +109,10 @@ async fn main() -> Result<()> {
         let written = schedule::emit(*daily, at, out.as_deref())?;
         if out.is_some() {
             println!("Wrote launchd plist to {}", written.display());
-            println!("Load it with: launchctl bootstrap gui/$(id -u) {}", written.display());
+            println!(
+                "Load it with: launchctl bootstrap gui/$(id -u) {}",
+                written.display()
+            );
         }
         return Ok(());
     }
