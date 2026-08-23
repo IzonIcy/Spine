@@ -37,6 +37,14 @@ struct Cli {
     #[arg(
         long,
         global = true,
+        value_name = "PATH",
+        help = "Load this exact config file instead of the search paths (cwd is never searched)"
+    )]
+    config: Option<PathBuf>,
+
+    #[arg(
+        long,
+        global = true,
         help = "Run cleanup commands after an upgrade workflow"
     )]
     cleanup: bool,
@@ -128,7 +136,10 @@ async fn main() -> Result<()> {
         return Ok(());
     }
 
-    let config = Config::load()?;
+    let config = match &cli.config {
+        Some(path) => Config::load_from(path)?,
+        None => Config::load()?,
+    };
 
     match &cli.command {
         Some(Commands::Config {

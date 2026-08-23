@@ -82,14 +82,19 @@ spn history last
 
 ## Configuration
 
-Spine reads `backbone.toml` from:
+Spine reads `backbone.toml` from, in order:
 
 - platform config dir (`~/.config/spine/backbone.toml` on most Linux, `~/Library/Application Support/spine/backbone.toml` on macOS)
-- current directory
 - `~/.spine/backbone.toml`
 - binary directory
 - `/etc/spine/backbone.toml`
 - `/usr/local/etc/spine/backbone.toml`
+
+The **current directory is deliberately not searched**. `backbone.toml` can define shell commands (and sudo-requiring ones), so honoring a config file dropped into whatever checkout you happen to be standing in would let any cloned repository execute arbitrary code the next time you run `spn` there. To use a specific non-standard config file, pass it explicitly:
+
+```sh
+spn --config ./path/to/backbone.toml upgrade
+```
 
 Example:
 

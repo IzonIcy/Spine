@@ -92,17 +92,38 @@ impl Config {
         }
     }
 
+    /// Parse config content from a string, used by [`Config::load_from`].
+    fn parse_with_active_path(content: String, path: PathBuf) -> Result<Self> {
+        Self::check_schema_version(&content)?;
+        let mut parsed: Config = toml::from_str(&content)
+            .with_context(|| format!("Invalid TOML in {}", path.display()))?;
+        parsed.active_path = Some(path);
+        Ok(parsed)
+    }
+
+    /// Load config from an explicitly requested path. Missing file is an error —
+    /// the user asked for this exact file, so silently falling back would hide a typo.
+    pub fn load_from(path: &Path) -> Result<Self> {
+        if !path.exists() {
+            anyhow::bail!("config file not found: {}", path.display());
+        }
+        let content = fs::read_to_string(path)
+            .with_context(|| format!("Failed to read config at {}", path.display()))?;
+        Self::parse_with_active_path(content, path.to_path_buf())
+    }
+
+    /// Load config by walking the fixed search paths (user config, `~/.spine`,
+    /// executable dir, system dirs). The current working directory is
+    /// deliberately NOT searched: `backbone.toml` drives shell execution, so
+    /// honoring one dropped into an untrusted checkout would let any cloned
+    /// repository run arbitrary commands the next time `spn` starts there.
+    /// Use `spn --config <path>` to opt into a specific non-standard file.
     pub fn load() -> Result<Self> {
-        let search_paths = config_search_paths();
-        for path in search_paths {
+        for path in config_search_paths() {
             if path.exists() {
                 let content = fs::read_to_string(&path)
                     .with_context(|| format!("Failed to read config at {}", path.display()))?;
-                Self::check_schema_version(&content)?;
-                let mut parsed: Config = toml::from_str(&content)
-                    .with_context(|| format!("Invalid TOML in {}", path.display()))?;
-                parsed.active_path = Some(path);
-                return Ok(parsed);
+                return Self::parse_with_active_path(content, path);
             }
         }
 
@@ -172,11 +193,6 @@ impl Config {
 pub fn config_search_paths() -> Vec<PathBuf> {
     let mut paths = Vec::new();
     paths.push(Config::default_user_path());
-    paths.push(
-        std::env::current_dir()
-            .unwrap_or_else(|_| PathBuf::from("."))
-            .join("backbone.toml"),
-    );
     if let Some(home) = dirs::home_dir() {
         paths.push(home.join(".spine").join("backbone.toml"));
     }

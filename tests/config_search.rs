@@ -45,13 +45,11 @@ fn env_guard_lock() -> std::sync::MutexGuard<'static, ()> {
 }
 
 #[test]
-fn load_prefers_backbone_toml_in_current_dir() {
+fn load_ignores_backbone_toml_in_current_dir() {
     let _lock = env_guard_lock();
     let tempdir = tempfile::tempdir().expect("tempdir");
-    let temp_root = fs::canonicalize(tempdir.path()).expect("canonicalize tempdir");
-    let config_path = temp_root.join("backbone.toml");
     fs::write(
-        &config_path,
+        tempdir.path().join("backbone.toml"),
         r#"
 [settings]
 timeout_seconds = 42
@@ -68,14 +66,51 @@ upgrade_all = "brew upgrade"
 
     let config = Config::load().expect("load config");
 
-    assert_eq!(
-        config.active_path(),
-        Some(config_path.as_path()),
-        "cwd backbone.toml should be picked up"
+    // A `backbone.toml` in the working directory drives shell execution, so it
+    // must never be picked up just because the user launched spn inside an
+    // untrusted checkout. Discovery is limited to user/system paths.
+    assert!(
+        config.active_path().is_none(),
+        "cwd backbone.toml must not be auto-loaded (arbitrary code execution risk)"
     );
+    assert_eq!(config.settings.timeout_seconds, 3600);
+}
+
+#[test]
+fn load_from_explicit_path_is_opt_in() {
+    let _lock = env_guard_lock();
+    let tempdir = tempfile::tempdir().expect("tempdir");
+    let config_path = tempdir.path().join("custom.toml");
+    fs::write(
+        &config_path,
+        r#"
+[settings]
+timeout_seconds = 42
+
+[managers.brew]
+name = "Homebrew"
+check_command = "brew --version"
+check_updates = "brew outdated"
+upgrade_all = "brew upgrade"
+"#,
+    )
+    .expect("write config");
+
+    let config = Config::load_from(&config_path).expect("explicit load");
+
+    assert_eq!(config.active_path(), Some(config_path.as_path()));
     assert_eq!(config.settings.timeout_seconds, 42);
     assert!(config.managers.contains_key("brew"));
-    assert!(config.validate().is_empty());
+}
+
+#[test]
+fn load_from_missing_path_errors_instead_of_falling_back() {
+    let tempdir = tempfile::tempdir().expect("tempdir");
+    let missing = tempdir.path().join("nope.toml");
+
+    let result = Config::load_from(&missing);
+
+    assert!(result.is_err(), "a requested-but-missing config must error, not silently fall back to defaults");
 }
 
 #[test]
