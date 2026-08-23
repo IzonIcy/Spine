@@ -110,7 +110,10 @@ fn load_from_missing_path_errors_instead_of_falling_back() {
 
     let result = Config::load_from(&missing);
 
-    assert!(result.is_err(), "a requested-but-missing config must error, not silently fall back to defaults");
+    assert!(
+        result.is_err(),
+        "a requested-but-missing config must error, not silently fall back to defaults"
+    );
 }
 
 #[test]
