@@ -101,7 +101,7 @@ impl Config {
         Ok(parsed)
     }
 
-    /// Load config from an explicitly requested path. Missing file is an error —
+    /// Load config from an explicitly requested path. Missing file is an error:
     /// the user asked for this exact file, so silently falling back would hide a typo.
     pub fn load_from(path: &Path) -> Result<Self> {
         if !path.exists() {

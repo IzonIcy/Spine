@@ -104,7 +104,7 @@ struct CommandRun {
 }
 
 /// Best-effort desktop notification when a workflow completes.
-/// Never fails the run — notification problems are silently ignored.
+/// Never fails the run; notification problems are silently ignored.
 pub fn notify_completion(summary: &RunSummary) {
     let ok = summary.managers.iter().filter(|m| m.success).count();
     let failed = summary.managers.len() - ok;

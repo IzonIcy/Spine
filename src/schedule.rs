@@ -8,7 +8,7 @@ const LABEL: &str = "com.spine.upgrade";
 /// Build a macOS launchd plist that runs `spn upgrade` on a schedule.
 ///
 /// Weekly schedules fire Mondays at the requested time; daily schedules
-/// fire every day. The plist is pure templating — installing it is left to
+/// fire every day. The plist is pure templating; installing it is left to
 /// the user (`launchctl bootstrap` or copying into ~/Library/LaunchAgents).
 pub fn launchd_plist(program: &Path, daily: bool, hour: u32, minute: u32) -> String {
     let program = program.display();
