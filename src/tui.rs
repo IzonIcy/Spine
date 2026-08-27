@@ -44,7 +44,6 @@ async fn run_inner(
         .collect();
     let mut running = false;
     let mut runner: Option<tokio::task::JoinHandle<Result<execute::RunSummary>>> = None;
-
     let mut status_map: BTreeMap<String, ManagerStatus> = BTreeMap::new();
     for manager in &managers {
         status_map.insert(manager.key.clone(), ManagerStatus::pending(manager.clone()));
@@ -148,7 +147,15 @@ async fn run_inner(
             if let Event::Key(key) = event::read()? {
                 if key.kind == KeyEventKind::Press {
                     match key.code {
-                        KeyCode::Char('q') => break,
+                        KeyCode::Char('q') => {
+                            // Quitting mid-run aborts the runner (children
+                            // are killed via kill_on_drop) instead of
+                            // blocking on it inside raw mode.
+                            if let Some(handle) = runner.take() {
+                                handle.abort();
+                            }
+                            break;
+                        }
                         KeyCode::Down | KeyCode::Char('j') => {
                             if selected + 1 < status_map.len() {
                                 selected += 1;
@@ -190,20 +197,19 @@ async fn run_inner(
         }
 
         if running {
-            let all_done = status_map.values().all(|status| {
-                matches!(
-                    status.stage,
-                    Stage::Complete | Stage::Failed | Stage::Skipped
-                )
-            });
-            if all_done {
-                break;
+            // Completion is driven by the task handle, not by status_map:
+            // deselected managers stay Pending forever, so inferring
+            // "all done" from statuses deadlocked the UI (running never
+            // cleared, r/space stayed locked). Awaiting a finished handle
+            // also propagates run failures instead of hiding them.
+            let finished = runner.as_ref().is_none_or(|handle| handle.is_finished());
+            if finished {
+                if let Some(handle) = runner.take() {
+                    handle.await??;
+                }
+                running = false;
             }
         }
-    }
-
-    if let Some(handle) = runner {
-        handle.await??;
     }
 
     Ok(())

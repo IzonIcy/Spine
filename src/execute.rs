@@ -426,10 +426,10 @@ async fn run_command(
 }
 
 fn build_command(cmd: &str, shell: bool) -> Result<Command> {
-    if shell {
+    let mut command = if shell {
         let mut command = Command::new("sh");
         command.arg("-c").arg(cmd);
-        Ok(command)
+        command
     } else {
         let mut parts = shell_words::split(cmd)?.into_iter();
         let Some(program) = parts.next() else {
@@ -437,8 +437,13 @@ fn build_command(cmd: &str, shell: bool) -> Result<Command> {
         };
         let mut command = Command::new(program);
         command.args(parts);
-        Ok(command)
-    }
+        command
+    };
+    // Aborting the runner (e.g. quitting the TUI mid-upgrade) drops the
+    // child handles; without kill_on_drop the spawned managers would keep
+    // running as orphans.
+    command.kill_on_drop(true);
+    Ok(command)
 }
 
 async fn read_stream<R>(
@@ -862,5 +867,30 @@ mod tests {
     #[tokio::test]
     async fn check_command_timeout_reports_not_installed() {
         assert!(!check_command("sleep 3", true, 1).await.unwrap());
+    }
+
+    #[test]
+    fn build_command_splits_unquoted_commands() {
+        let command = build_command("brew upgrade --greedy", false).unwrap();
+        assert_eq!(command.as_std().get_program(), "brew");
+        assert_eq!(
+            command.as_std().get_args().collect::<Vec<_>>(),
+            ["upgrade", "--greedy"]
+        );
+    }
+
+    #[test]
+    fn build_command_shell_mode_uses_sh_c() {
+        let command = build_command("echo hi", true).unwrap();
+        assert_eq!(command.as_std().get_program(), "sh");
+        assert_eq!(
+            command.as_std().get_args().collect::<Vec<_>>(),
+            ["-c", "echo hi"]
+        );
+    }
+
+    #[test]
+    fn build_command_rejects_empty_command() {
+        assert!(build_command("   ", false).is_err());
     }
 }
